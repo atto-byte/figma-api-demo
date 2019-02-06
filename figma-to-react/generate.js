@@ -1,24 +1,15 @@
 require('dotenv').config()
 const fetch = require('node-fetch');
-const fs = require('fs');
 const figma = require('./lib/figma');
-
+const fs = require('fs');
 const headers = new fetch.Headers();
 const componentList = [];
 let devToken = process.env.DEV_TOKEN;
 
-if (process.argv.length < 3) {
-  console.log('Usage: node setup.js <file-key> [figma-dev-token]');
-  process.exit(0);
-}
-
-if (process.argv.length > 3) {
-  devToken = process.argv[3];
-}
 
 headers.append('X-Figma-Token', devToken);
 
-const fileKey = process.argv[2];
+const fileKey = process.env.FILE_KEY
 const baseUrl = 'https://api.figma.com';
 
 const vectorMap = {};
@@ -89,15 +80,16 @@ function preprocessTree(node) {
 async function main() {
   let resp = await fetch(`${baseUrl}/v1/files/${fileKey}`, {headers});
   let data = await resp.json();
-
   const doc = data.document;
   const canvas = doc.children[0];
   let html = '';
 
   for (let i=0; i<canvas.children.length; i++) {
     const child = canvas.children[i]
+    
     if (child.name.charAt(0) === '#'  && child.visible !== false) {
       const child = canvas.children[i];
+      console.log(child.children);
       preprocessTree(child);
     }
   }
@@ -129,7 +121,7 @@ async function main() {
   }
 
   const componentMap = {};
-  let contents = `import React, { PureComponent } from 'react';\n`;
+  let contents = `import * as React from 'react';\n`;
   let nextSection = '';
 
   for (let i=0; i<canvas.children.length; i++) {
@@ -137,7 +129,7 @@ async function main() {
     if (child.name.charAt(0) === '#' && child.visible !== false) {
       const child = canvas.children[i];
       figma.createComponent(child, images, componentMap);
-      nextSection += `export class Master${child.name.replace(/\W+/g, "")} extends PureComponent {\n`;
+      nextSection += `export class Master${child.name.replace(/\W+/g, "")} extends React.PureComponent<any> {\n`;
       nextSection += "  render() {\n";
       nextSection += `    return <div className="master" style={{backgroundColor: "${figma.colorString(child.backgroundColor)}"}}>\n`;
       nextSection += `      <C${child.name.replace(/\W+/g, "")} {...this.props} nodeId="${child.id}" />\n`;
@@ -170,7 +162,7 @@ async function main() {
   contents += "  return null;\n}\n\n";
   contents += nextSection;
 
-  const path = "./src/figmaComponents.js";
+  const path = "src/figmaComponents.tsx";
   fs.writeFile(path, contents, function(err) {
     if (err) console.log(err);
     console.log(`wrote ${path}`);

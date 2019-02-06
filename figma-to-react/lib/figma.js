@@ -105,17 +105,17 @@ const createComponent = (component, imgMap, componentMap) => {
   const instance = name + component.id.replace(';', 'S').replace(':', 'D');
 
   let doc = '';
-  print(`class ${instance} extends PureComponent {`, '');
+  print(`class ${instance} extends React.PureComponent<any> {`, '');
   print(`  render() {`, '');
   print(`    return (`, '');
 
-  const path = `src/components/${name}.js`;
-
+  const path = `src/components/${name}.tsx`;
+  let componentSrc;
   if (!fs.existsSync(path)) {
-    const componentSrc = `import React, { PureComponent } from 'react';
+    componentSrc = `import * as React from 'react';
 import { getComponentFromId } from '../figmaComponents';
 
-export class ${name} extends PureComponent {
+export class ${name} extends React.PureComponent<any> {
   state = {};
 
   render() {
@@ -126,6 +126,7 @@ export class ${name} extends PureComponent {
 `;
     fs.writeFile(path, componentSrc, function(err) {
       if (err) console.log(err);
+      console.log(componentSrc)
       console.log(`wrote ${path}`);
     });
   }
@@ -301,7 +302,7 @@ export class ${name} extends PureComponent {
           _styles.fontSize = fontStyle.fontSize;
           _styles.fontWeight = fontStyle.fontWeight;
           _styles.fontFamily = fontStyle.fontFamily;
-          _styles.textAlign = fontStyle.textAlignHorizontal;
+          _styles.textAlign = fontStyle.textAlignHorizontal.toLowerCase();
           _styles.fontStyle = fontStyle.italic ? 'italic' : 'normal';
           _styles.lineHeight = `${fontStyle.lineHeightPercent * 1.25}%`;
           _styles.letterSpacing = `${fontStyle.letterSpacing}px`;
