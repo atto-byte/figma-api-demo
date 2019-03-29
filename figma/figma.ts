@@ -1,12 +1,15 @@
-import { nodeSort, colorString, getPaint, imageURL, backgroundSize, paintToLinearGradient, paintToRadialGradient, dropShadow, innerShadow } from "./utils/parsers";
+import { Document, Horizontal, Vertical, NodeType, TypeStyle, TextAlignHorizontal } from './types';
+import { nodeSort, colorString, getPaint, imageURL, backgroundSize, paintToLinearGradient, paintToRadialGradient, dropShadow, innerShadow, parseRectangle, parseEffects } from "./utils/parsers";
 
 const fs = require('fs');
 
 const VECTOR_TYPES = ['VECTOR', 'LINE', 'REGULAR_POLYGON', 'ELLIPSE'];
 const GROUP_TYPES = ['GROUP', 'BOOLEAN_OPERATION'];
 
-
-function expandChildren(node, parent, minChildren, maxChildren, centerChildren, offset) {
+interface CustomDocument extends Document {
+  order?: number
+}
+function expandChildren(node: CustomDocument, parent: CustomDocument | null, minChildren, maxChildren, centerChildren, offset) {
   const children = node.type !== 'VECTOR' ?  node.children : null;
   let added = offset;
 
@@ -15,21 +18,29 @@ function expandChildren(node, parent, minChildren, maxChildren, centerChildren, 
       const child = children[i];
       const notCanvas = child.type !== 'CANVAS'
       const notRoot = parent != null
-      if(notCanvas){
-        if (notRoot && (node.type === 'COMPONENT' || node.type === 'INSTANCE')) {
-          child.constraints = {vertical: 'TOP_BOTTOM', horizontal: 'LEFT_RIGHT'};
-        }
-      }
-      
+      if(notCanvas && notRoot && (node.type === 'COMPONENT' || node.type === 'INSTANCE')){
 
+        child.constraints = {vertical: Vertical.TopBottom, horizontal: Horizontal.LeftRight};
+      }
       if (GROUP_TYPES.indexOf(child.type) >= 0) {
         console.log(child.type , child);
-        added += expandChildren(child, parent, minChildren, maxChildren, centerChildren, added+i);
+        switch (child.type) {
+          case NodeType.Group:
+          added += expandChildren(child, parent, minChildren, maxChildren, centerChildren, added+i);
+            break;
+          case NodeType.Boolean:
+            
+            break;
+        
+        
+          default:
+            added += expandChildren(child, parent, minChildren, maxChildren, centerChildren, added+i);
+            break;
+        }
         continue;
+      } else {
+        centerChildren.push(child);
       }
-          else {
-            centerChildren.push(child);
-          }
 
       child.order = i + added;
 
@@ -79,19 +90,20 @@ export class ${name} extends React.PureComponent<any> {
     doc += `${indent}${msg}\n`;
   }
 
-  const visitNode = (node, parent, lastVertical, indent) => {
+  const visitNode = (node: Document, parent: Document | null, lastVertical, indent) => {
     let content = null;
     let img = null;
     let styles: React.CSSProperties = {
       backgroundRepeat: "no-repeat"
     };
+    const isRoot = (parent != null)
     let minChildren = [];
     const maxChildren = [];
     const centerChildren = [];
     let bounds = null;
     let nodeBounds = null;
 
-    if (parent != null) {
+    if (isRoot) {
       nodeBounds = node.absoluteBoundingBox;
       const nx2 = nodeBounds.x + nodeBounds.width;
       const ny2 = nodeBounds.y + nodeBounds.height;
@@ -115,106 +127,108 @@ export class ${name} extends React.PureComponent<any> {
     let innerClass = 'innerDiv';
     const cHorizontal = node.constraints && node.constraints.horizontal;
     const cVertical = node.constraints && node.constraints.vertical;
-    let outerStyle: React.CSSProperties = {};
+    let outerStyle: React.CSSProperties = {
+      position: 'absolute',
+      height: '100%',
+      top: 0, left: 0,
+      width: '100%'
+    };
 
     if (node.order) {
       outerStyle.zIndex = node.order;
     }
+    if (bounds != null){
+      switch (cHorizontal) {
+        case 'LEFT_RIGHT':
+          styles.marginLeft = bounds.left;
+          styles.marginRight = bounds.right;
+          styles.flexGrow = 1;
+          break;
+        case 'RIGHT':
+          styles.marginRight = bounds.right;
+          styles.marginLeft = 'auto';
+          styles.width = bounds.width;
+          styles.minWidth = bounds.width;
+          break;
+        case 'LEFT':
+          styles.marginLeft = bounds.left;
+          styles.marginRight = 'auto';
+          styles.width = bounds.width;
+          styles.minWidth = bounds.width;
+          break;
+        case 'CENTER':
+          styles.width = bounds.width;
+          styles.marginLeft = 'auto';
+          styles.marginRight = 'auto';
+          break;
+        case 'SCALE':
+          const parentWidth = bounds.left + bounds.width + bounds.right;
+          styles.width = `${bounds.width*100/parentWidth}%`;
+          styles.marginLeft = `${bounds.left*100/parentWidth}%`;
+          break;
+      
+        default:
+          styles.marginLeft = bounds.left;
+          styles.width = bounds.width;
+          styles.minWidth = bounds.width;
+          break;
+      }
 
-    if (cHorizontal === 'LEFT_RIGHT') {
-      if (bounds != null) {
-        styles.marginLeft = bounds.left;
-        styles.marginRight = bounds.right;
-        styles.flexGrow = 1;
-      }
-    } else if (cHorizontal === 'RIGHT') {
-      outerStyle.justifyContent = 'flex-end';
-      if (bounds != null) {
-        styles.marginRight = bounds.right;
-        styles.width = bounds.width;
-        styles.minWidth = bounds.width;
-      }
-    } else if (cHorizontal === 'CENTER') {
-      outerStyle.justifyContent = 'center';
-      if (bounds != null) {
-        styles.width = bounds.width;
-        styles.marginLeft = bounds.left && bounds.right ? bounds.left - bounds.right : null;
-      }
-    } else if (cHorizontal === 'SCALE') {
-      if (bounds != null) {
-        const parentWidth = bounds.left + bounds.width + bounds.right;
-        styles.width = `${bounds.width*100/parentWidth}%`;
-        styles.marginLeft = `${bounds.left*100/parentWidth}%`;
-      }
-    } else {
-      if (bounds != null) {
-        styles.marginLeft = bounds.left;
-        styles.width = bounds.width;
-        styles.minWidth = bounds.width;
+      switch (cVertical) {
+        case 'TOP_BOTTOM':
+          outerClass += ' centerer';
+          styles.marginTop = bounds.top;
+          styles.marginBottom = bounds.bottom;
+          break;
+          
+          case 'BOTTOM':
+          outerStyle.justifyContent = 'flex-end';
+          styles.marginTop = 'auto';
+          styles.height = bounds.height;
+          styles.marginBottom = bounds.bottom;
+          styles.minHeight = bounds.height;
+          break;
+          
+          case 'CENTER':
+          outerClass += ' centerer';
+          outerStyle.alignItems = 'center';
+          styles.margin = 'auto'
+          break;
+          
+          case 'TOP':
+          styles.marginTop = bounds.top;
+          outerStyle.justifyContent = 'center';
+          styles.height = bounds.height;
+          styles.marginBottom = 'auto';
+          break;
+
+        case 'SCALE':
+          outerClass += ' centerer';
+          const parentHeight = bounds.top + bounds.height + bounds.bottom;
+          styles.height = `${bounds.height*100/parentHeight}%`;
+          styles.top = `${bounds.top*100/parentHeight}%`;
+          break;
+      
+        default:
+          styles.marginTop = bounds.top;
+          styles.marginBottom = bounds.bottom;
+          styles.minHeight = styles.height;
+          styles.height = null;
+          break;
       }
     }
+    
 
-    if (bounds && bounds.height && cVertical !== 'TOP_BOTTOM') styles.height = bounds.height;
-    if (cVertical === 'TOP_BOTTOM') {
-      outerClass += ' centerer';
-      if (bounds != null) {
-        styles.marginTop = bounds.top;
-        styles.marginBottom = bounds.bottom;
-      }
-    } else if (cVertical === 'CENTER') {
-      outerClass += ' centerer';
-      outerStyle.alignItems = 'center';
-      if (bounds != null) {
-        styles.marginTop = bounds.top - bounds.bottom;
-      }
-    } else if (cVertical === 'SCALE') {
-      outerClass += ' centerer';
-      if (bounds != null) {
-        const parentHeight = bounds.top + bounds.height + bounds.bottom;
-        styles.height = `${bounds.height*100/parentHeight}%`;
-        styles.top = `${bounds.top*100/parentHeight}%`;
-      }
-    } else {
-      if (bounds != null) {
-        styles.marginTop = bounds.top;
-        styles.marginBottom = bounds.bottom;
-        styles.minHeight = styles.height;
-        styles.height = null;
-      }
-    }
+    // if (bounds && bounds.height && cVertical !== 'TOP_BOTTOM') styles.height = bounds.height;
+   
 
     if (['FRAME', 'RECTANGLE', 'INSTANCE', 'COMPONENT'].indexOf(node.type) >= 0) {
       if (['FRAME', 'COMPONENT', 'INSTANCE'].indexOf(node.type) >= 0) {
         styles.backgroundColor = colorString(node.backgroundColor);
         if (node.clipsContent) styles.overflow = 'hidden';
       } else if (node.type === 'RECTANGLE') {
-        const lastFill = getPaint(node.fills);
-        if (lastFill) {
-          if (lastFill.type === 'SOLID') {
-            styles.backgroundColor = colorString(lastFill.color);
-            styles.opacity = lastFill.opacity;
-          } else if (lastFill.type === 'IMAGE') {
-            styles.backgroundImage = imageURL(lastFill.imageRef);
-            styles.backgroundSize = backgroundSize(lastFill.scaleMode);
-          } else if (lastFill.type === 'GRADIENT_LINEAR') {
-            styles.background = paintToLinearGradient(lastFill);
-          } else if (lastFill.type === 'GRADIENT_RADIAL') {
-            styles.background = paintToRadialGradient(lastFill);
-          }
-        }
-
-        if (node.effects) {
-          for (let i=0; i<node.effects.length; i++) {
-            const effect = node.effects[i];
-            if (effect.type === 'DROP_SHADOW') {
-              styles.boxShadow = dropShadow(effect);
-            } else if (effect.type === 'INNER_SHADOW') {
-              styles.boxShadow = innerShadow(effect);
-            } else if (effect.type === 'LAYER_BLUR') {
-              styles.filter = `blur(${effect.radius}px)`;
-            }
-          }
-        }
+        parseRectangle(node, styles);
+        parseEffects(node, styles);
 
         const lastStroke = getPaint(node.strokes);
         if (lastStroke) {
@@ -242,15 +256,18 @@ export class ${name} extends React.PureComponent<any> {
       }
 
       const fontStyle = node.style;
-      const genTextAlign = (textAlignHorizontal) => {
+      const genTextAlign = (textAlignHorizontal: TextAlignHorizontal) => {
         console.log(textAlignHorizontal);
-        if(textAlignHorizontal && textAlignHorizontal.toLowerCase() === "justified"){
+        if(!textAlignHorizontal) return 'center'
+
+        if(textAlignHorizontal === TextAlignHorizontal.Justified){
           return "center"
         } else {
           return fontStyle.textAlignHorizontal && fontStyle.textAlignHorizontal.toLowerCase()
         }
       }
-      const applyFontStyle = (_styles, fontStyle) => {
+      // TODO Does this do anything
+      const applyFontStyle = (_styles, fontStyle: TypeStyle) => {
         if (fontStyle) {
           _styles.fontSize = fontStyle.fontSize;
           _styles.fontWeight = fontStyle.fontWeight;
@@ -284,6 +301,7 @@ export class ${name} extends React.PureComponent<any> {
             para = '';
           }
         }
+
 
         for (const i in node.characters) {
           let idx = node.characterStyleOverrides[i];
@@ -383,4 +401,6 @@ export class ${name} extends React.PureComponent<any> {
 }
 
 export { createComponent, colorString };
+
+
 

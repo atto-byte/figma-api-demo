@@ -251,6 +251,7 @@ export enum BlendMode {
  * changes applied to the instance
  */
 export interface Document {
+    order?: number
     /**
      * An array of canvases attached to the document
      *
@@ -318,6 +319,7 @@ export interface Document {
     /**
      * Does this node mask sibling nodes in front of it?
      */
+    rectangleCornerRadii?: number[]
     isMask?: boolean;
     /**
      * An array of layout grids attached to this node (see layout grids section
@@ -362,7 +364,8 @@ export interface Document {
     /**
      * Text contained within text box
      */
-    characters?: string;
+    // TODO Was String
+    characters?: any;
     /**
      * Array with same number of elements as characeters in text box,
      * each element is a reference to the styleOverrideTable defined

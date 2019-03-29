@@ -61,3 +61,40 @@ export function paintToRadialGradient(paint) {
 
   return `radial-gradient(${stops})`;
 }
+
+export function parseEffects(node: any, styles) {
+  if (node.effects) {
+    for (let i = 0; i < node.effects.length; i++) {
+      const effect = node.effects[i];
+      if (effect.type === 'DROP_SHADOW') {
+        styles.boxShadow = dropShadow(effect);
+      }
+      else if (effect.type === 'INNER_SHADOW') {
+        styles.boxShadow = innerShadow(effect);
+      }
+      else if (effect.type === 'LAYER_BLUR') {
+        styles.filter = `blur(${effect.radius}px)`;
+      }
+    }
+  }
+}
+
+export function parseRectangle(node: any, styles) {
+  const lastFill = getPaint(node.fills);
+  if (lastFill) {
+    if (lastFill.type === 'SOLID') {
+      styles.backgroundColor = colorString(lastFill.color);
+      styles.opacity = lastFill.opacity;
+    }
+    else if (lastFill.type === 'IMAGE') {
+      styles.backgroundImage = imageURL(lastFill.imageRef);
+      styles.backgroundSize = backgroundSize(lastFill.scaleMode);
+    }
+    else if (lastFill.type === 'GRADIENT_LINEAR') {
+      styles.background = paintToLinearGradient(lastFill);
+    }
+    else if (lastFill.type === 'GRADIENT_RADIAL') {
+      styles.background = paintToRadialGradient(lastFill);
+    }
+  }
+}

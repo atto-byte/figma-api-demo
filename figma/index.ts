@@ -2,6 +2,7 @@ require('dotenv').config()
 import fetch from 'node-fetch';
 import * as figma from './figma';
 import fetchData from './utils/fetchData';
+import { Document, NodeType, Paint } from './types';
 const fs = require('fs');
 const componentList = [];
 let devToken = process.env.DEV_TOKEN;
@@ -19,12 +20,12 @@ const vectorList = [];
 const vectorTypes = ['VECTOR', 'LINE', 'REGULAR_POLYGON', 'ELLIPSE', 'STAR'];
 
 
-function preprocessTree(node) {
+function preprocessTree(node: Document) {
   let vectorsOnly = node.name.charAt(0) !== '#';
   let vectorVConstraint = null;
   let vectorHConstraint = null;
 
-  function paintsRequireRender(paints) {
+  function paintsRequireRender(paints: Paint[]) {
     if (!paints) return false;
 
     let numPaints = 0;
@@ -38,10 +39,11 @@ function preprocessTree(node) {
     return numPaints > 1;
   }
 
+  
   if (paintsRequireRender(node.fills) ||
       paintsRequireRender(node.strokes) ||
       (node.blendMode != null && ['PASS_THROUGH', 'NORMAL'].indexOf(node.blendMode) < 0)) {
-    node.type = 'VECTOR';
+    node.type = NodeType.Vector;
   }
 
   const children = node.children && node.children.filter((child) => child.visible !== false);
@@ -59,7 +61,7 @@ function preprocessTree(node) {
   node.children = children;
 
   if (children && children.length > 0 && vectorsOnly) {
-    node.type = 'VECTOR';
+    node.type = NodeType.Vector;
     node.constraints = {
       vertical: vectorVConstraint,
       horizontal: vectorHConstraint,
@@ -67,32 +69,32 @@ function preprocessTree(node) {
   }
 
   if (vectorTypes.indexOf(node.type) >= 0) {
-    node.type = 'VECTOR';
+    node.type = NodeType.Vector;
     vectorMap[node.id] = node;
     vectorList.push(node.id);
     node.children = [];
   }
 
   if (node.children) {
-    for (const child of node.children) {
-      preprocessTree(child);
-    }
+    node.children = node.children.map(child =>  preprocessTree(child))
   }
+  return node;
 }
 
 async function main() {
   const { canvas, data } = await fetchData();
   let html = '';
 
-  for (let i=0; i<canvas.children.length; i++) {
-    const child = canvas.children[i]
-    
+  let children = canvas.children.reduce((acc, child) => {
     if (child.visible !== false) {
-      const child = canvas.children[i];
-      console.log(child.children);
-      preprocessTree(child);
+      child = preprocessTree(child);
+      return [...acc, child]
     }
-  }
+    return acc
+  }, [])
+  
+
+
 
   let guids = vectorList.join(',');
   const imagesResponse = await fetch(`${baseUrl}/v1/images/${fileKey}?ids=${guids}&format=svg`, {headers});

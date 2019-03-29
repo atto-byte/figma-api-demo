@@ -6,10 +6,12 @@ import { MasterLoboloRack1, MasterLoboloRack2, MasterLoboloRack3 } from './figma
 const Page: React.SFC = () => {
   return(
     <div>
-      <MasterLoboloRack1/>
+      <MasterLoboloRack2/>
       
     </div>
   )
 }
+
+
 ReactDOM.render(<Page/>,document.body);
 registerServiceWorker();

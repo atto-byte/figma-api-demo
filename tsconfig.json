@@ -24,5 +24,5 @@
       "lib/*": [ "lib/*" ],
   }
   },
-  "exclude": ["node_modules", ".next", ".vscode", "generatePages.ts"]
+  "exclude": ["node_modules", ".next", ".vscode", "figma"]
 }
