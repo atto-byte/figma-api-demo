@@ -1,4 +1,4 @@
-import { Document, Horizontal, Vertical, NodeType, TypeStyle, TextAlignHorizontal } from './types';
+import { Document, Horizontal, Vertical, NodeType, TypeStyle, TextAlignHorizontal, Pattern } from './types';
 import { nodeSort, colorString, getPaint, imageURL, backgroundSize, paintToLinearGradient, paintToRadialGradient, dropShadow, innerShadow, parseRectangle, parseEffects } from "./utils/parsers";
 
 const fs = require('fs');
@@ -140,9 +140,34 @@ export class ${name} extends React.PureComponent<any> {
     if (bounds != null){
       switch (cHorizontal) {
         case 'LEFT_RIGHT':
-          styles.marginLeft = bounds.left;
-          styles.marginRight = bounds.right;
-          styles.flexGrow = 1;
+          if(parent.layoutGrids){
+            const keyPoints = node.layoutGrids.reduce((acc, grid) => {
+              if(grid.pattern ===  Pattern.Columns){
+                const margin = grid.offset;
+                for (let i = 0; i < grid.count; i++) {
+                  const start = i === 0 ? margin : margin + i * (grid.sectionSize + grid.gutterSize)                 
+                  const end = i === 0 ? margin + grid.sectionSize : margin + grid.sectionSize + i * (grid.sectionSize + grid.gutterSize)
+                  acc.xKeyPoints = [...acc.xKeyPoints, start, end]
+                }
+                return acc
+              }
+              else if(grid.pattern ===  Pattern.Rows){
+                const margin = grid.offset;
+                for (let i = 0; i < grid.count; i++) {
+                  const start = i === 0 ? margin : margin + i * (grid.sectionSize + grid.gutterSize)                 
+                  const end = i === 0 ? margin + grid.sectionSize : margin + grid.sectionSize + i * (grid.sectionSize + grid.gutterSize)
+                  acc.yKeyPoints = [...acc.yKeyPoints, start, end]
+                }
+                return acc
+              }
+            }, {xKeyPoints: [], yKeyPoints: [] , grid: []})
+
+            const parentWidth = bounds.left + bounds.width + bounds.right;
+          } else {
+            styles.marginLeft = bounds.left;
+            styles.marginRight = bounds.right;
+            styles.flexGrow = 1;
+          }
           break;
         case 'RIGHT':
           styles.marginRight = bounds.right;

@@ -11,18 +11,21 @@ const baseUrl = 'https://api.figma.com';
 
 
 
-async function fetchData() {
+async function fetchData(local = false) {
   const path = `${process.cwd()}/data.json` 
-  // let resp = await fetch(`${baseUrl}/v1/files/${fileKey}`, { headers: headers });
-  // let data: FileResponse = await resp.json();
-  // console.log(JSON.stringify(data))
-  // fs.writeFile(path, JSON.stringify(data), function(err) {
-  //   if (err) console.log(err);
-  //   console.log(`wrote ${path}`);
-  // });
-  const data: FileResponse = require(path)
-  const doc = data.document;
-  const canvas = doc.children && doc.children[0];
-  return { canvas, data };
+  if(local){
+    const data: FileResponse = require(path)
+    const doc = data.document;
+    const canvas = doc.children && doc.children[0];
+    return { canvas, data };
+  } else {
+    let resp = await fetch(`${baseUrl}/v1/files/${fileKey}`, { headers: headers });
+    let data: FileResponse = await resp.json();
+    console.log(JSON.stringify(data))
+    fs.writeFile(path, JSON.stringify(data), function(err) {
+      if (err) console.log(err);
+      console.log(`wrote ${path}`);
+    });
+  }
 }
 export default fetchData

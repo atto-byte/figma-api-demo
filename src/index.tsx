@@ -6,8 +6,8 @@ import { MasterLoboloRack1, MasterLoboloRack2, MasterLoboloRack3 } from './figma
 const Page: React.SFC = () => {
   return(
     <div>
-      <MasterLoboloRack2/>
-      
+      <MasterLoboloRack3/>
+
     </div>
   )
 }
