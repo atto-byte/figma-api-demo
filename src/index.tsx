@@ -7,8 +7,7 @@ const Page: React.SFC = () => {
   return(
     <div>
       <MasterLoboloRack1/>
-      <MasterLoboloRack2/>
-      <MasterLoboloRack3/>
+      
     </div>
   )
 }

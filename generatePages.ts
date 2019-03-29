@@ -1,6 +1,6 @@
 require('dotenv').config()
 import fetch from 'node-fetch';
-import * as figma from './lib/figma';
+import * as figma from './figma/figma';
 const fs = require('fs');
 const headers = new fetch.Headers();
 const componentList = [];
