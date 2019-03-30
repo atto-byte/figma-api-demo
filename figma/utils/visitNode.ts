@@ -121,21 +121,21 @@ export const visitNode = (vectorMap: VectorMap, masterComponentsMap: ComponentMa
       }
       maxChildComponentStr += generateComponentEnd()
     }
-    // if (content != null) {
-    //   if (node.name.charAt(0) === '$') {
-    //     const varName = node.name.substring(1);
-    //     doc += `${tab(tabNum + 3)}{this.props[${varName}] && this.props[${varName}].split("\\n").map((line, idx) => <div key={idx}>{line}</div>)}\n`
-    //     doc += `${tab(tabNum + 3)}{!this.props[${varName}] && (<div>\n`
-    //     for (const piece of content) {
-    //       doc += `${tab(tabNum + 4)}${piece}\n` 
-    //     }
-    //     doc += `${tab(3)}</div>)}\n`
-    //   } else {
-    //     for (const piece of content) {
-    //       doc += `${tab(tabNum)}${piece}\n` 
-    //     }
-    //   }
-    // }
+    if (content != null) {
+      if (node.name.charAt(0) === '$') {
+        const varName = node.name.substring(1);
+        componentStr += `${tab(tabNum + 3)}{props[${varName}] && props[${varName}].split("\\n").map((line, idx) => <div key={idx}>{line}</div>)}\n`
+        componentStr += `${tab(tabNum + 3)}{!props[${varName}] && (<div>\n`
+        for (const piece of content) {
+          componentStr += `${tab(tabNum + 4)}${piece}\n` 
+        }
+        componentStr += `${tab(3)}</div>)}\n`
+      } else {
+        for (const piece of content) {
+          componentStr += `${tab(tabNum)}${piece}\n` 
+        }
+      }
+    }
     componentStr+= minChildComponentStr + centerChildComponentStr + maxChildComponentStr
   }
   if (isRoot) {

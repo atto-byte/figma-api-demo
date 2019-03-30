@@ -2,12 +2,12 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import './index.css';
 import registerServiceWorker from './registerServiceWorker';
-import { MasterLoboloRack1 } from './figmaComponents';
+import { MasterLoboloRack1, MasterLoboloRack2 } from './figmaComponents';
 const Page: React.SFC = () => {
   return(
     <div>
-      <MasterLoboloRack1 />
-      
+      <MasterLoboloRack2 />
+
     </div>
   )
 }
