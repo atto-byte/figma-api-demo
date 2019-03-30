@@ -1,6 +1,6 @@
 require('dotenv').config()
 import fetch from 'node-fetch';
-import { FileResponse } from 'figma/types';
+import { FileResponse } from '../types';
 import * as fs from 'fs';
 
 const devToken = process.env.DEV_TOKEN as string;
@@ -11,7 +11,7 @@ const baseUrl = 'https://api.figma.com';
 
 
 
-async function fetchData(local = false) {
+async function fetchData(local = true) {
   const path = `${process.cwd()}/data.json` 
   if(local){
     const data: FileResponse = require(path)
@@ -21,10 +21,9 @@ async function fetchData(local = false) {
   } else {
     let resp = await fetch(`${baseUrl}/v1/files/${fileKey}`, { headers: headers });
     let data: FileResponse = await resp.json();
-    console.log(JSON.stringify(data))
     fs.writeFile(path, JSON.stringify(data), function(err) {
       if (err) console.log(err);
-      console.log(`wrote ${path}`);
+      console.log(`Saved Data @ ${path}`);
     });
   }
 }

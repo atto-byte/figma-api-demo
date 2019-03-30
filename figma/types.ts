@@ -31,6 +31,16 @@
  * key String
  * File to export JSON from
  */
+export type VectorMap = {
+    [vectorId: string]: Document
+  }
+export type ComponentMap = {
+    [componentId: string]: {
+      componentStr: string,
+      instance: string,
+      name: string
+    }
+  }
 export interface FileResponse {
     /**
      * A mapping from node IDs to component metadata. This is to help you determine which
@@ -628,6 +638,10 @@ export interface Paint {
      * Image scaling mode
      */
     scaleMode?: string;
+    /**
+     * Image Reference
+     */
+    imageRef?: string;
     /**
      * Type of paint as a string enum
      */
