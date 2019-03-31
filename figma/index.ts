@@ -1,7 +1,7 @@
 require('dotenv').config()
 import fetch from 'node-fetch';
 import * as figma from './figma';
-import { ComponentMap } from './types';
+import { ComponentMap, Document, VectorMap, NodeType } from './types';
 import fetchData from './utils/fetchData';
 import { preprocessTree } from './utils/preprocessTree';
 import { colorString } from './utils/parsers';
@@ -34,14 +34,14 @@ async function main() {
   const vectorsJSON = await vectorsResponse.json();
 
   const vectorUrls = vectorsJSON.images || {};
-  const splitVectorUrls =  Object.keys(vectorUrls).reduce((acc, vectorId) => {
-    const Ids = vectorId.split(';')
-    Ids.forEach(id => {
-      acc = {...acc, [id]: vectorUrls[vectorId], }
-    });
-    return acc
-  }, {})
-  const vectorMap = await Object.keys(splitVectorUrls).reduce(async (accumP, vectorId) => {
+  // const splitVectorUrls =  Object.keys(vectorUrls).reduce((acc, vectorId) => {
+  //   const Ids = vectorId.split(';')
+  //   Ids.forEach(id => {
+  //     acc = {...acc, [id]: vectorUrls[vectorId], }
+  //   });
+  //   return acc
+  // }, {})
+  const vectorMap: VectorMap = await Object.keys(vectorUrls).reduce(async (accumP, vectorId) => {
     if(vectorUrls[vectorId]){
       let accum = await accumP
       const response = await fetch(vectorUrls[vectorId])
@@ -68,30 +68,38 @@ main().catch((err) => {
   console.error(err.stack);
 });
 
-function generateMasterComponents(children,vectors){
+function generateMasterComponents(children: Document[],vectors: VectorMap){
   let masterComponents = `\n`;
   let masterComponentsMap: ComponentMap = {};
   children.forEach(child => {
-    let masterComponentStr = ''
-    if (child.visible !== false) {
-      // Here Be Dragons
-      masterComponentsMap = figma.createComponentInstance(child, null, vectors, masterComponentsMap);
-
-      masterComponentStr += `export const Master${child.name.replace(/\W+/g, "")}: React.SFC<any> = (props) => {\n`;
-      masterComponentStr += `${tab(1)}return(\n`;
-      masterComponentStr += `${tab(2)}<div\n`;
-      masterComponentStr += `${tab(3)}className="master"\n`;
-      masterComponentStr += `${tab(3)}style={{backgroundColor: "${colorString(child.backgroundColor)}"}}\n`;
-      masterComponentStr += `${tab(2)}>\n`;
-      masterComponentStr += `${tab(3)}<C${child.name.replace(/\W+/g, "")} {...props} nodeId="${child.id}" />\n`;
-      masterComponentStr += `${tab(2)}</div>\n`;
-      masterComponentStr += `${tab(1)})\n`;
-      masterComponentStr += "}\n\n";
-      masterComponents += masterComponentStr
+    switch (child.type) {
+      case NodeType.Component:
+        const masterComponentStr = createMasterComponent(child);
+        masterComponents += masterComponentStr
+        break;
+      case NodeType.Instance:
+        masterComponentsMap = figma.createComponentInstance(child, null, vectors, masterComponentsMap);
+      default:
+        break;
     }
   })
   return {masterComponentsMap, masterComponents};
 }
+function createMasterComponent(child: Document) {
+  let masterComponentStr = '';
+  masterComponentStr += `export const Master${child.name.replace(/\W+/g, "")}: React.SFC<any> = (props) => {\n`;
+  masterComponentStr += `${tab(1)}return(\n`;
+  masterComponentStr += `${tab(2)}<div\n`;
+  masterComponentStr += `${tab(3)}className="master"\n`;
+  masterComponentStr += `${tab(3)}style={{backgroundColor: "${colorString(child.backgroundColor)}"}}\n`;
+  masterComponentStr += `${tab(2)}>\n`;
+  masterComponentStr += `${tab(3)}<C${child.name.replace(/\W+/g, "")} {...props} nodeId="${child.id}" />\n`;
+  masterComponentStr += `${tab(2)}</div>\n`;
+  masterComponentStr += `${tab(1)})\n`;
+  masterComponentStr += "}\n\n";
+  return masterComponentStr;
+}
+
 function generateComponents(componentMap: ComponentMap) {
   let funStr = `export function getComponentFromId(id) {\n`;
   let componentsStrs = `\n`

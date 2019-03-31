@@ -10,14 +10,14 @@ export const visitNode = (vectorMap: VectorMap, masterComponentsMap: ComponentMa
   let styles: React.CSSProperties = {
     backgroundRepeat: "no-repeat"
   };
-  const isRoot = (parent != null)
+  const notRoot = (parent !== null)
   let minChildren = [];
   let maxChildren = [];
   let centerChildren = [];
   let bounds = null;
   let nodeBounds = null;
 
-  if (isRoot) {
+  if (notRoot) {
     nodeBounds = node.absoluteBoundingBox;
     const nx2 = nodeBounds.x + nodeBounds.width;
     const ny2 = nodeBounds.y + nodeBounds.height;
@@ -82,7 +82,7 @@ export const visitNode = (vectorMap: VectorMap, masterComponentsMap: ComponentMa
   } 
 
   let componentStr = ``
-  if (isRoot) {
+  if (notRoot) {
     componentStr = generateComponentStart(styles, outerStyle, outerClass, node, innerClass, tabNum);
   }
   // if (node.id !== component.id && node.name.charAt(0) === '#') {
@@ -95,51 +95,75 @@ export const visitNode = (vectorMap: VectorMap, masterComponentsMap: ComponentMa
   } else {
     const newNodeBounds = node.absoluteBoundingBox;
     const newLastVertical = newNodeBounds && newNodeBounds.y + newNodeBounds.height;
-    let first = true;
-    let minChildComponentStr;
-    for (const child of minChildren) {
-      minChildComponentStr += visitNode(vectorMap, masterComponentsMap, child, node, first ? null : newLastVertical, tabNum + 3);
-      first = false;
-    }
+    
+    const minChildComponentStr = parseMinChildren(minChildren, vectorMap, masterComponentsMap, node, newLastVertical, tabNum);
+    const centerChildComponentStr = parseCenterChildren(centerChildren, vectorMap, masterComponentsMap, node, tabNum);
+    const maxChildComponentStr = parseMaxChildren(maxChildren, outerClass, styles, outerStyle, node, innerClass, tabNum, vectorMap, masterComponentsMap, newLastVertical);
+    const contentString = parseContent(content, node, tabNum);
 
-    let centerChildComponentStr;
-    for (const child of centerChildren) {
-      centerChildComponentStr += visitNode(vectorMap, masterComponentsMap, child, node, null, tabNum + 3)
-    };
-
-    let maxChildComponentStr = ''
-    if (maxChildren.length > 0) {
-      outerClass += ' maxer';
-      styles.width = '100%';
-      styles.pointerEvents = 'none';
-      styles.backgroundColor = null;
-      maxChildComponentStr +=  generateComponentStart(styles, outerStyle,outerClass,node,innerClass, tabNum + 3);
-      first = true;
-      for (const child of maxChildren) {
-        maxChildComponentStr += visitNode(vectorMap, masterComponentsMap, child, node, first ? null : newLastVertical, tabNum + 5);
-        first = false;
-      }
-      maxChildComponentStr += generateComponentEnd()
-    }
-    if (content != null) {
-      if (node.name.charAt(0) === '$') {
-        const varName = node.name.substring(1);
-        componentStr += `${tab(tabNum + 3)}{props[${varName}] && props[${varName}].split("\\n").map((line, idx) => <div key={idx}>{line}</div>)}\n`
-        componentStr += `${tab(tabNum + 3)}{!props[${varName}] && (<div>\n`
-        for (const piece of content) {
-          componentStr += `${tab(tabNum + 4)}${piece}\n` 
-        }
-        componentStr += `${tab(3)}</div>)}\n`
-      } else {
-        for (const piece of content) {
-          componentStr += `${tab(tabNum)}${piece}\n` 
-        }
-      }
-    }
-    componentStr+= minChildComponentStr + centerChildComponentStr + maxChildComponentStr
+    componentStr += contentString + minChildComponentStr + centerChildComponentStr + maxChildComponentStr
   }
-  if (isRoot) {
+  if (notRoot) {
     componentStr+= generateComponentEnd();
   }
   return componentStr
+}
+
+function parseContent(content: any, node: Document, tabNum: number) {
+  let contentString = ''
+  if (content != null) {
+    if (node.name.charAt(0) === '$') {
+      const varName = node.name.substring(1);
+      contentString += `${tab(tabNum + 3)}{props[${varName}] && props[${varName}].split("\\n").map((line, idx) => <div key={idx}>{line}</div>)}\n`;
+      contentString += `${tab(tabNum + 3)}{!props[${varName}] && (<div>\n`;
+      for (const piece of content) {
+        contentString += `${tab(tabNum + 4)}${piece}\n`;
+      }
+      contentString += `${tab(3)}</div>)}\n`;
+    }
+    else {
+      for (const piece of content) {
+        contentString += `${tab(tabNum)}${piece}\n`;
+      }
+    }
+  }
+  return contentString;
+}
+
+function parseMaxChildren(maxChildren: any[], outerClass: string, styles, outerStyle, node: Document, innerClass: string, tabNum: number, vectorMap: VectorMap, masterComponentsMap: ComponentMap, newLastVertical: number) {
+  let maxChildComponentStr = '';
+  let first = true
+  if (maxChildren.length > 0) {
+    outerClass += ' maxer';
+    styles.width = '100%';
+    styles.pointerEvents = 'none';
+    styles.backgroundColor = null;
+    maxChildComponentStr += generateComponentStart(styles, outerStyle, outerClass, node, innerClass, tabNum + 3);
+    first = true;
+    for (const child of maxChildren) {
+      maxChildComponentStr += visitNode(vectorMap, masterComponentsMap, child, node, first ? null : newLastVertical, tabNum + 5);
+      first = false;
+    }
+    maxChildComponentStr += generateComponentEnd();
+  }
+  return maxChildComponentStr;
+}
+
+function parseCenterChildren(centerChildren: any[], vectorMap: VectorMap, masterComponentsMap: ComponentMap, node: Document, tabNum: number) {
+  let centerChildComponentStr = '';
+  for (const child of centerChildren) {
+    centerChildComponentStr += visitNode(vectorMap, masterComponentsMap, child, node, null, tabNum + 3);
+  }
+  ;
+  return centerChildComponentStr;
+}
+
+function parseMinChildren(minChildren: any[], vectorMap: VectorMap, masterComponentsMap: ComponentMap, node: Document, newLastVertical: number, tabNum: number) {
+  let first = true;
+  let minChildComponentStr = '';
+  for (const child of minChildren) {
+    minChildComponentStr += visitNode(vectorMap, masterComponentsMap, child, node, first ? null : newLastVertical, tabNum + 3);
+    first = false;
+  }
+  return minChildComponentStr;
 }

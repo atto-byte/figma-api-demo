@@ -133,61 +133,43 @@ export function parseBounds(parent,outerClass,outerStyle, cHorizontal, cVertical
   if (bounds != null){
     switch (cHorizontal) {
       case 'LEFT_RIGHT':
-        if(parent.layoutGrids){
-         // FIX Kill the Outer Div 
-          const keyPoints = parent.layoutGrids.reduce((acc, grid) => {
-            if(grid.pattern ===  Pattern.Columns){
-              const margin = grid.offset;
-              for (let i = 0; i < grid.count; i++) {
-                const start = i === 0 ? margin : margin + i * (grid.sectionSize + grid.gutterSize)                 
-                const end = i === 0 ? margin + grid.sectionSize : margin + grid.sectionSize + i * (grid.sectionSize + grid.gutterSize)
-                acc.xKeyPoints = [...acc.xKeyPoints, start, end]
-                styles.marginLeft = 'auto';
-                styles.marginRight = 'auto';
-              }
-              return acc
-            }
-            else if(grid.pattern ===  Pattern.Rows){
-              const margin = grid.offset;
-              for (let i = 0; i < grid.count; i++) {
-                const start = i === 0 ? margin : margin + i * (grid.sectionSize + grid.gutterSize)                 
-                const end = i === 0 ? margin + grid.sectionSize : margin + grid.sectionSize + i * (grid.sectionSize + grid.gutterSize)
-                acc.yKeyPoints = [...acc.yKeyPoints, start, end]
-              }
-              return acc
-            }
-          }, {xKeyPoints: [], yKeyPoints: [] , grid: []})
-          const parentWidth = bounds.left + bounds.width + bounds.right;
-        } else {
-          styles.marginLeft = bounds.left;
-          styles.marginRight = bounds.right;
-          styles.flexGrow = 1;
-        }
+        outerClass += ' h_left_right';
+        styles.marginLeft = bounds.left;
+        styles.marginRight = bounds.right;
+        styles.width = bounds.width;
+        styles.minWidth = bounds.width;
+        styles.flexGrow = 1;
         break;
+
       case 'RIGHT':
+      outerClass += ' h_right';
         styles.marginRight = bounds.right;
         styles.marginLeft = 'auto';
         styles.width = bounds.width;
         styles.minWidth = bounds.width;
         break;
       case 'LEFT':
+        outerClass += ' h_left';
         styles.marginLeft = bounds.left;
         styles.marginRight = 'auto';
         styles.width = bounds.width;
         styles.minWidth = bounds.width;
         break;
       case 'CENTER':
+        outerClass += ' h_center';
         styles.width = bounds.width;
         styles.marginLeft = 'auto';
         styles.marginRight = 'auto';
         break;
       case 'SCALE':
+        outerClass += ' h_scale';
         const parentWidth = bounds.left + bounds.width + bounds.right;
         styles.width = `${bounds.width*100/parentWidth}%`;
         styles.marginLeft = `${bounds.left*100/parentWidth}%`;
         break;
     
       default:
+        outerClass += ' h_default';
         styles.marginLeft = bounds.left;
         styles.width = bounds.width;
         styles.minWidth = bounds.width;
@@ -196,12 +178,13 @@ export function parseBounds(parent,outerClass,outerStyle, cHorizontal, cVertical
 
     switch (cVertical) {
       case 'TOP_BOTTOM':
-        outerClass += ' centerer';
+        outerClass += ' v_top_bottom';
         styles.marginTop = bounds.top;
         styles.marginBottom = bounds.bottom;
         break;
         
         case 'BOTTOM':
+        outerClass += ' v_bottom';
         outerStyle.justifyContent = 'flex-end';
         styles.marginTop = 'auto';
         styles.height = bounds.height;
@@ -210,26 +193,28 @@ export function parseBounds(parent,outerClass,outerStyle, cHorizontal, cVertical
         break;
         
         case 'CENTER':
-        outerClass += ' centerer';
+        outerClass += ' v_center';
         outerStyle.alignItems = 'center';
         styles.margin = 'auto'
         break;
         
         case 'TOP':
+        outerClass += ' v_top';
         styles.marginTop = bounds.top;
         outerStyle.justifyContent = 'center';
         styles.height = bounds.height;
         styles.marginBottom = 'auto';
         break;
-
-      case 'SCALE':
-        outerClass += ' centerer';
+        
+        case 'SCALE':
+        outerClass += ' v_scale';
         const parentHeight = bounds.top + bounds.height + bounds.bottom;
         styles.height = `${bounds.height*100/parentHeight}%`;
         styles.top = `${bounds.top*100/parentHeight}%`;
         break;
-    
-      default:
+        
+        default:
+        outerClass += ' v_default';
         styles.marginTop = bounds.top;
         styles.marginBottom = bounds.bottom;
         styles.minHeight = styles.height;
